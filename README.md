@@ -47,94 +47,20 @@ Abstracting external systems and resources from agents via a canonical resource 
     res::secret/github-pat/johan/read-only
 ---
 
-## Architecture
+## Architectural Decision Records (ADRs)
 
-### ADR-001 Pure Terraform Provider Project
+Architectural decisions are formally recorded as immutable ADRs under [`docs/adrs/`](docs/adrs/):
 
-This is a pure resource project providing Terraform modules for inclusion by the actual state holding infra projects
-provided by the FAST setup.
-
-### ADR-002 Terraform Stateless
-
-This project should not have any Terraform state by itself other than for testing.\
-To simplify destruction of resources transient test projects will be utilized for integration testing\
-where the entire project where test-deployment is happening can be destroyed after test-runs.
-
-### ADR-003 Public Repo and GitHub Distribution
-
-To be able to act as a provider to Terraform projects in a straight forward way by referencing projects files directly
-via GitHub.
-
-### ADR-004 Only Transient Secrets
-
-This project will not should not handle or maintain any secrets. Any secrets needed for tests should be
-destroyed/expired when test run completes.
-
-### ADR-005 Call Name
-
-All agents will be given a human name. It has to be unique withing the FAST installation. It is used as the reference to
-agent and\
-all resources belonging to the agent should be tagged as agent with and
-
-### ADR-006 Email
-
-Each agent gets an email address so external systems that require one (signup flows, verification codes, notification
-recipients) work out of the box. Constraints:
-
-- **No paid seats.** Google Workspace / Microsoft 365 licenses per agent are rejected on cost grounds.
-- **Isolation.** An agent must not be able to read another agent's mail.
-- **Wipeable.** It must be possible to clear an agent's mailbox on demand or on a schedule, without touching other
-  agents' data.
-
-The chosen approach is **one shared Gmail inbox behind a catch-all custom domain**, with per-agent isolation and
-wipe enabled by the mail MCP server rather than by the mail account itself. Concretely:
-
-- A single Gmail account holds all agent mail. Its OAuth refresh token lives in Secret Manager.
-- A custom domain (e.g. `agents.<org>.example`) uses a free catch-all forwarder (Cloudflare Email Routing) to send
-  `<call-name>@agents.<org>.example` into that shared inbox.
-- The mail MCP (see [ADR-007](README.md#adr-007-egress)) authenticates once with the shared credentials and exposes a
-  per-agent API surface. It filters reads by the `Delivered-To:` header so an agent only ever sees mail addressed to
-  its own alias; send operations set `From:` to the agent's alias; wipe is a filtered trash-and-purge scoped to one
-  alias.
-
-Trade-off: isolation is enforced by MCP code, not by mail-server credentials. That is consistent with the ADR-007
-trust posture but makes the alias-filter logic in the MCP a critical review target and warrants an integration test
-that verifies alias boundaries cannot be crossed.
-
-### ADR-007 Egress
-
-All interaction to outer world is handled via MCP-servers that can provide authentication/authorization.\
-MCP servers should be thin wrappers so that underlying services can be utilized in a transparent way by agents.\
-Only security or Mission Critical rules is enforced via them. For instance controlling what signature is used on git commits.
-That gives the control needed to achieve objective [Secret Identity](README.md#4-secret-identity)
-
-### ADR-008 FAST Group Naming
-
-All IAM groups created or referenced by this project follow the Cloud Foundation Fabric FAST naming convention
-so agent groups can be bound via the same `context.iam_principals` alias mechanism as human groups.\
-The canonical aliases are `gcp-organization-admins`, `gcp-billing-admins`, `gcp-network-admins`, `gcp-security-admins`,
-`gcp-devops` and `gcp-support` — see the [FAST domainless-iam ADR](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/adrs/fast/0-domainless-iam.md) for the authoritative set.\
-Agent-specific groups extend the same `gcp-<role>[-<qualifier>]` shape, where `<qualifier>` is typically the agent's
-[Call Name](README.md#adr-005-call-name), for example `gcp-agent-reviewers` or `gcp-agent-<call-name>`.
-
-### ADR-009 Resource Manager Tags for Agent Identity
-
-Agent-type classification is expressed as a Resource Manager tag binding, not a label, so it can drive IAM conditions
-and org-policy conditions (e.g. only service accounts bound to `agent-type/reviewer` may impersonate a given resource).\
-This project defines a canonical `agent-type` tag key with a controlled set of values (`reviewer`, `writer`, ...) and
-follows FAST's convention of exposing it via the `$tag_keys:agent-type` alias so downstream stages can reference it
-without hard-coding IDs — see FAST's [tag definitions](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/0-org-setup/datasets/hardened/organization/tags) for the pattern.\
-Other tags are  (`agent-call-name`, `agent-human-owner`).
-
-### ADR-010 One GitHub App Per Agent
-
-Each agent gets its own dedicated GitHub App, and therefore its own PEM private key. A shared "platform" App
-with many installations was rejected because a single compromised PEM would let an attacker impersonate every
-agent, and per-agent permission scoping would collapse into the union of all agents' needs.\
-One App per agent means: strong blast-radius isolation, per-agent revocation (delete the App to fully retire
-the identity), and clean attribution — commits and PRs carry the agent's own bot user. The trade-off is one
-manual App registration per agent (see [ADR-007 Egress](README.md#adr-007-egress) constraint on bootstrap)
-and one PEM per agent stored in Secret Manager.
+- [ADR-001: Pure Terraform Provider Project](docs/adrs/001-pure-terraform-provider-project.md)
+- [ADR-002: Ephemeral Integration Testing & Teardown](docs/adrs/002-ephemeral-integration-testing.md)
+- [ADR-003: Public Repo and GitHub Distribution](docs/adrs/003-public-repo-and-github-distribution.md)
+- [ADR-004: FAST Stage Integration Pattern](docs/adrs/004-fast-stage-integration-pattern.md)
+- [ADR-005: Modular Design & Separation of Responsibilities](docs/adrs/005-modular-design.md)
+- [ADR-006: Compliance Framework & Pre-Push Security Guardrails](docs/adrs/006-compliance-framework-and-pre-push-security-guardrails.md)
+- [ADR-007: Dependency & Provider Version Management](docs/adrs/007-dependency-and-provider-version-management.md)
+- [ADR-008: Secret Management & Credentials](docs/adrs/008-secret-management.md)
+- [ADR-009: Automated CI/CD Pipeline Integration](docs/adrs/009-automated-cicd-pipeline-integration.md)
+- [ADR-010: Semantic Versioning Strategy & Release Lifecycle](docs/adrs/010-semantic-versioning-strategy.md)
 
 
 ### Artifacts
