@@ -4,13 +4,14 @@
 * **Date**: 2026-07-23
 
 ## Context
-This repository is designed to support the Google Cloud FAST installation by providing agent setup components (identities, service accounts, secrets access, mailboxes, and resource tags).
+This repository provides agent setup components (identities, service accounts, secrets access, mailboxes, and resource tags) for Google Cloud FAST.
 
 ## Decision
-This repository will function as a **pure resource provider project** containing reusable Terraform modules.
+This repository functions as a **pure resource provider project** containing reusable Terraform modules consumed directly by state-holding FAST stages. Modules MUST NOT include backend configuration blocks (`backend "gcs"`).
 
-The actual state-holding infrastructure projects provided by the FAST setup will consume and include these modules directly. Module definitions inside this repository MUST NOT include backend configuration blocks (`backend "gcs"`) or persistent state configuration, adhering to FAST module interface standards.
+## References
+* [Google Cloud Best Practices for Terraform](https://cloud.google.com/docs/terraform/best-practices/general-style-structure)
 
 ## Consequences
-* **Statelessness**: This repository does not handle or persist production Terraform state (state is created for testing purposes only and discarded).
-* **Reusability**: Downstream FAST stages can reference and include these modules directly via GitHub source URLs (e.g., `github.com/johgr814/agents-infra//modules/...`).
+* **Statelessness**: This repository does not handle or persist production Terraform state.
+* **Reusability**: Downstream FAST stages reference and include these modules directly via GitHub source URLs.
