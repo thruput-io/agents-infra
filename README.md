@@ -72,12 +72,12 @@ _{terraform include name access groups}_
 
 Agent service accounts will never be granted roles directly. Roles will be granted via user groups.
 This module will house all user groups and role assignments to those groups.
-Group names follow the FAST convention — see [ADR-008](README.md#adr-008-fast-group-naming).
+Group names follow the FAST convention — see [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md).
 
-##### 3. Service Accounts
+##### 2. Service Accounts
 _{terraform include name service accounts}_
 
-Creates a service account with an `agent-type` Resource Manager tag binding (see [ADR-009](README.md#adr-009-resource-manager-tags-for-agent-identity))
+Creates a service account with an `agent-type` Resource Manager tag binding
 and descriptive labels carrying call name and human owner.
 Sample:
 ```hcl
@@ -90,33 +90,17 @@ labels = {
 }
 ```
 
-##### 4. Service Accounts
-_{terraform include name service accounts}_
-
-Creates a service account with an `agent-type` Resource Manager tag binding (see [ADR-009](README.md#adr-009-resource-manager-tags-for-agent-identity))
-and descriptive labels carrying call name and human owner.
-Sample:
-```hcl
-tag_bindings = {
-    agent-type = "$tag_values:agent-type/reviewer"
-}
-labels = {
-    agent-call-name   = "gustaf"
-    agent-human-owner = "johan.granlund"
-}
-```
-
-##### 5. Agent GitHub App
+##### 3. Agent GitHub App
 _{terraform include name github app}_
 
 Configures a GitHub App to act as the agent's identity and access bridge to GitHub, so commits, PRs and reviews
-are attributed to the agent rather than a human user (Objective [GitHub Identity](README.md#3-github-identity)).
-One App per agent, one PEM per agent — see [ADR-010](README.md#adr-010-one-github-app-per-agent).
+are attributed to the agent rather than a human user (Objective [GitHub Identity](#3-github-identity)).
+One App per agent, one PEM per agent — see [ADR-008](docs/adrs/008-secret-management.md).
 
 The App itself must be registered once via the GitHub UI or [App Manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
 — GitHub does not expose an API to create Apps without a human consent step. The PEM produced at registration
 is uploaded to GCP Secret Manager under a per-agent secret name and never leaves that boundary (Objectives
-[Opaque Secrets](README.md#5-opaque-secrets), ADR-007).
+[Opaque Secrets](#5-opaque-secrets), [ADR-008](docs/adrs/008-secret-management.md)).
 
 This module then, using the [`integrations/github`](https://registry.terraform.io/providers/integrations/github/latest/docs) provider:
 
@@ -125,19 +109,14 @@ This module then, using the [`integrations/github`](https://registry.terraform.i
 - leaves token minting to the runtime MCP layer, which calls the `github_app_token` data source (or the
   equivalent REST endpoint) to hand a short-lived installation token to the agent on demand.
 
-The App name incorporates the agent's [Call Name](README.md#adr-005-call-name), e.g. `agent-gustaf`, so the
+The App name incorporates the agent's call name, e.g. `agent-gustaf`, so the
 identity is discoverable from the same reference used elsewhere.
 
-##### 6. Agent Mailbox
+##### 4. Agent Mailbox
 _{terraform include name mailbox}_
 
-Provisions a singleton agent mailbox on google mail. (see [ADR-006](README.md#adr-006-email))
+Provisions a singleton agent mailbox on google mail.
 
 Per agent this module:
 
 - Creates an alias `<call-name>@thruput.com` on the mail singleton mail account.
-
-##### 7. Agent tags
-(ai fill in)
-
-##### 8. 
