@@ -1,6 +1,6 @@
 # Modules Plan
 
-This document outlines the complete set of single-responsibility Terraform modules under `modules/` required to fulfill Architectural Decision Records ADR-001 through ADR-010.
+This document outlines the complete set of single-responsibility Terraform modules under `modules/` required to fulfill Architectural Decision Records ADR-001 through ADR-010 and agent runtime requirements (including MCP server hosting).
 
 ---
 
@@ -29,3 +29,7 @@ This document outlines the complete set of single-responsibility Terraform modul
 ### 6. Agent Mailbox (`modules/agent-mailbox`)
 - **Purpose**: Provisions singleton Google Workspace/Mail accounts and creates per-agent email aliases (`<call-name>@thruput.com`).
 - **ADR References**: [ADR-005](../../adrs/005-modular-design.md)
+
+### 7. MCP Server Runtime (`modules/mcp-server`)
+- **Purpose**: Provisions containerized serverless compute (Cloud Run), invoker IAM roles (`roles/run.invoker`), Workload Identity integration, and runtime Secret Manager environment variable injection for Model Context Protocol (MCP) server tools.
+- **ADR References**: [ADR-001](../../adrs/001-pure-terraform-provider-project.md), [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
