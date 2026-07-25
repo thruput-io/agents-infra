@@ -1,62 +1,31 @@
 # Modules Plan
 
-## Artifacts
+This document outlines the complete set of single-responsibility Terraform modules under `modules/` required to fulfill Architectural Decision Records ADR-001 through ADR-010.
 
-### Terraform Modules
+---
 
-#### 1. Access Group
-_{terraform include name access groups}_
+## Terraform Submodules Taxonomy
 
-Agent service accounts will never be granted roles directly. Roles will be granted via user groups.
-This module will house all user groups and role assignments to those groups.
-Group names follow the FAST convention — see [ADR-008](../../adrs/008-secret-management.md).
+### 1. Access Group (`modules/access-group`)
+- **Purpose**: Provisions GCP User Groups and FAST IAM role assignments to those groups. Agent service accounts are granted roles exclusively via group membership.
+- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
 
-#### 2. Service Accounts
-_{terraform include name service accounts}_
+### 2. Agent Identity (`modules/agent-identity`)
+- **Purpose**: Creates GCP Service Accounts with descriptive labels (`agent-call-name`, `agent-human-owner`) and Resource Manager tag bindings (`agent-type`).
+- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
 
-Creates a service account with an `agent-type` Resource Manager tag binding (see [ADR-005](../../adrs/005-modular-design.md))
-and descriptive labels carrying call name and human owner.
-Sample:
-```hcl
-tag_bindings = {
-    agent-type = "$tag_values:agent-type/reviewer"
-}
-labels = {
-    agent-call-name   = "gustaf"
-    agent-human-owner = "johan.granlund"
-}
-```
+### 3. Agent GitHub App (`modules/agent-github-app`)
+- **Purpose**: Configures GitHub App installations and repository-level access using the `integrations/github` provider. Secret PEMs are stored securely in Secret Manager and referenced opaquely.
+- **ADR References**: [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
 
-#### 3. Agent GitHub App
-_{terraform include name github app}_
+### 4. Secret Access (`modules/secret-access`)
+- **Purpose**: Provisions GCP Secret Manager secrets (`google_secret_manager_secret`) and grants least-privilege `roles/secretmanager.secretAccessor` IAM roles to authorized agent service accounts.
+- **ADR References**: [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
 
-Configures a GitHub App to act as the agent's identity and access bridge to GitHub, so commits, PRs and reviews
-are attributed to the agent rather than a human user (Objective [GitHub Identity](../../../README.md#3-github-identity)).
-One App per agent, one PEM per agent — see [ADR-008](../../adrs/008-secret-management.md).
+### 5. Resource Tagging (`modules/resource-tagging`)
+- **Purpose**: Manages GCP Resource Manager tag keys, tag values (e.g. `agent-type/reviewer`), and tag bindings to enforce identity and security classification across GCP resources.
+- **ADR References**: [ADR-005](../../adrs/005-modular-design.md)
 
-The App itself must be registered once via the GitHub UI or [App Manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
-— GitHub does not expose an API to create Apps without a human consent step. The PEM produced at registration
-is uploaded to GCP Secret Manager under a per-agent secret name and never leaves that boundary (Objectives
-[Opaque Secrets](../../../README.md#5-opaque-secrets), [ADR-007](../../adrs/007-dependency-and-provider-version-management.md)).
-
-This module then, using the [`integrations/github`](https://registry.terraform.io/providers/integrations/github/latest/docs) provider:
-
-- installs the App on the agent's target repositories and sets per-repo permissions,
-- exposes `app_id` and `installation_id` as outputs so downstream stages can reference the identity,
-- leaves token minting to the runtime MCP layer, which calls the `github_app_token` data source (or the
-  equivalent REST endpoint) to hand a short-lived installation token to the agent on demand.
-
-The App name incorporates the agent's Call Name, e.g. `agent-gustaf`, so the
-identity is discoverable from the same reference used elsewhere.
-
-#### 4. Agent Mailbox
-_{terraform include name mailbox}_
-
-Provisions a singleton agent mailbox on google mail.
-
-Per agent this module:
-
-- Creates an alias `<call-name>@thruput.com` on the mail singleton mail account.
-
-#### 5. Agent tags
-(ai fill in)
+### 6. Agent Mailbox (`modules/agent-mailbox`)
+- **Purpose**: Provisions singleton Google Workspace/Mail accounts and creates per-agent email aliases (`<call-name>@thruput.com`).
+- **ADR References**: [ADR-005](../../adrs/005-modular-design.md)
