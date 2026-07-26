@@ -4,26 +4,35 @@ This document details the runtime architecture, identity separation, network ing
 
 ---
 
-## 1. Architectural Overview
+## 1. Architectural Overview & Managed Identity Parity
 
 The MCP layer acts as a secure, containerized tool execution gateway hosted on Google Cloud Run. It sits between invoking AI Agents (or internal trigger sources) and external/internal APIs (e.g., GitHub, GCP APIs, databases).
+
+### GCP Service Accounts vs. Azure System-Assigned Identities
+GCP Service Accounts function as **Google Cloud's exact equivalent of Azure System-Assigned Managed Identities**:
+* **Credential-less & Keyless**: No static service account keys (`.json`) or client secrets are created or stored.
+* **Automatic Instance Metadata Auth**: When an agent runs inside GCP (GKE, Cloud Run, Compute Engine), it authenticates via the internal GCP Instance Metadata Server (`http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/identity`), exactly like Azure Managed Identity (`http://169.254.169.254/metadata/identity/oauth2/token`).
+* **Zero Manual Token Management**: Google Client SDKs (`google-auth`, `google-cloud-*`) query the metadata server and attach the target audience OIDC token automatically in memory. Developer/agent code performs standard HTTP calls without handling token strings manually.
 
 ```mermaid
 sequenceDiagram
     autonumber
+    participant Metadata as GCP Metadata Server<br/>(169.254.169.254)
     actor Agent as Invoking Agent SA<br/>(agent-gustaf@...)
     participant IAM as GCP Cloud Run IAM<br/>(roles/run.invoker)
     participant MCP as MCP Server (Cloud Run)<br/>(ingress = internal)
     participant SM as Secret Manager API
     participant GH as External API / GitHub
 
-    Agent->>IAM: 1. HTTP POST + OIDC Bearer Token
-    IAM->>MCP: 2. Validate OIDC token & pass request + caller identity
-    MCP->>SM: 3. Dynamic Secret Resolution based on caller SA
-    SM-->>MCP: 4. Return caller-specific short-lived token
-    MCP->>GH: 5. Execute tool call with caller's token
-    GH-->>MCP: 6. Return raw payload
-    MCP-->>Agent: 7. Return sanitized response
+    Agent->>Metadata: 1. Auto-fetch OIDC Token for MCP URL (transparent SDK call)
+    Metadata-->>Agent: 2. Return short-lived OIDC Token
+    Agent->>IAM: 3. HTTP POST + Bearer Token (attached automatically)
+    IAM->>MCP: 4. Validate OIDC token & pass request + caller identity
+    MCP->>SM: 5. Dynamic Secret Resolution based on caller SA
+    SM-->>MCP: 6. Return caller-specific short-lived token
+    MCP->>GH: 7. Execute tool call with caller's token
+    GH-->>MCP: 8. Return raw payload
+    MCP-->>Agent: 9. Return sanitized response
 ```
 
 ---
@@ -47,12 +56,12 @@ To maintain strict security boundaries, the MCP architecture enforces three dist
 
 ---
 
-## 4. Two-Tier Authentication & Dynamic Secret Resolution
+## 4. Two-Tier Transparent Authentication & Dynamic Secret Resolution
 
-### Tier 1: Inbound Invoker Authentication (OIDC ID Token)
-1. The Invoking Agent requests a Google-signed OIDC ID Token targeted at the MCP Cloud Run service URL (`aud = https://mcp-server-xyz.a.run.app`).
-2. The agent sends an HTTP request with `Authorization: Bearer <Google_OIDC_ID_Token>`.
-3. GCP Cloud Run infrastructure validates the OIDC JWT signature and checks `roles/run.invoker`. Unverified requests are rejected at the GCP IAM boundary with `403 Forbidden`.
+### Tier 1: Inbound Invoker Authentication (Automatic Metadata OIDC)
+1. The Google SDK running inside the Invoking Agent queries the internal GCP Metadata Server (`169.254.169.254`) for an identity token targeted at the MCP Cloud Run URL (`aud = https://mcp-server-xyz.a.run.app`).
+2. The SDK attaches the token automatically as an HTTP header: `Authorization: Bearer <Google_OIDC_ID_Token>`.
+3. GCP Cloud Run infrastructure validates the OIDC JWT signature and checks `roles/run.invoker`. Unverified requests are rejected at the GCP IAM boundary with `403 Forbidden` before touching the container.
 
 ### Tier 2: Dynamic Secret Resolution per Invoker Identity
 1. Upon receiving an authenticated request, the MCP container extracts the verified caller identity (`email` / `sub` claim from the OIDC token, e.g. `agent-gustaf@...`).
