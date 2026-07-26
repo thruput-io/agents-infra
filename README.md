@@ -61,6 +61,7 @@ Architectural decisions are formally recorded as immutable ADRs under [`docs/adr
 - [ADR-008: Secret Management & Credentials](docs/adrs/008-secret-management.md)
 - [ADR-009: Automated CI/CD Pipeline Integration](docs/adrs/009-automated-cicd-pipeline-integration.md)
 - [ADR-010: Semantic Versioning Strategy & Release Lifecycle](docs/adrs/010-semantic-versioning-strategy.md)
+- [ADR-011: MCP Server Runtime Architecture & Identity Separation](docs/adrs/011-mcp-server-runtime-architecture.md)
 
 
 ### Artifacts
