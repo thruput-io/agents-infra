@@ -9,13 +9,15 @@ This document defines the complete set of single-responsibility Terraform module
 ### 1. Access Group (`modules/access-group`)
 - **FAST Stage Alignment**: Stage 1 (Resource Manager) / Stage 3 (Tenant/Project Factory)
 - **Purpose**: Provisions GCP User Groups and FAST IAM role assignments to those groups. Agent service accounts are granted roles exclusively via group membership.
+- **Naming Enforced**: Cloud Identity group emails strictly enforce the FAST convention `${prefix}-${group_key}@${domain}` (e.g. `fast-agent-reviewer@thruput.com`).
 - **Inputs**:
   - `organization_id` (`string`, required): GCP Organization ID where groups reside.
-  - `prefix` (`string`, optional, default `null`): Standard FAST naming prefix (e.g. `fast-agent`).
+  - `domain` (`string`, required): Primary domain name for Cloud Identity groups (e.g., `thruput.com`).
+  - `prefix` (`string`, required, default `"fast-agent"`): Mandatory FAST group naming prefix.
   - `group_definitions` (`map(object({ display_name = string, description = string }))`, required): Map of group keys to group metadata.
   - `group_iam_roles` (`map(list(string))`, optional, default `{}`): Map of group keys to lists of GCP IAM role names.
 - **Outputs**:
-  - `group_emails` (`map(string)`): Map of group keys to group email addresses.
+  - `group_emails` (`map(string)`): Map of group keys to generated Cloud Identity group email addresses (`${prefix}-${group_key}@${domain}`).
   - `group_ids` (`map(string)`): Map of group keys to Cloud Identity group IDs.
   - `iam_bindings` (`map(list(string))`): Applied IAM role bindings per group key.
 - **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
