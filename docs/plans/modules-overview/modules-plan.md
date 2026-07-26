@@ -1,41 +1,41 @@
 # Modules Plan & Terraform Interface Contracts
 
-This document defines the complete set of single-responsibility Terraform submodules under `modules/`, detailing their FAST stage alignment, architectural decisions, input contracts, and output contracts to ensure seamless integration into Google Cloud FAST.
+This document defines the set of single-responsibility Terraform submodules under `modules/`, detailing their FAST stage alignment, architectural decisions, input contracts, and output contracts to ensure seamless integration into Google Cloud FAST.
 
 ---
 
-## Global Architectural Directives (ADR-003 Parity)
+## Global Architectural Directives
 
-All submodules in this project strictly comply with **[google-dev ADR 003](../../../google-dev/docs/adr/003-strict-environment-parity.md)** and repository governance rules:
+All submodules in this project **MUST** comply with **[ADR-012: Deterministic Infrastructure](docs/adrs/012-deterministic-infrastructure.md)** and repository governance rules:
 
 1. **Zero Conditional Branching**: Submodules are linear, declarative units. They contain zero conditional branching (`count = var.enable ? 1 : 0`) or internal environment logic.
 2. **Explicit Variable Injection**: All required variables must be explicitly provided by the caller. Internal shell or fallback magic is prohibited.
 3. **Out-of-Band Secret Lifecycle**: Plaintext secret payloads are never committed to Terraform state. Secret shells and IAM accessor bindings are managed by IaC; secret versions are populated out-of-band via Secret Manager.
-4. **Strict Identity Separation**: Invoking agent identities, MCP runtime identities, and management identities are strictly separate service accounts following least-privilege principles.
+4. **Strict Identity Separation**: Invoking agent identities, MCP runtime identities, and management identities are strictly separate service accounts following least-privilege principles ([ADR-011](docs/adrs/011-mcp-server-runtime-architecture.md)).
 
 ---
 
 ## Terraform Submodules Taxonomy & Interface Contracts
 
-### 1. Access Group (`modules/access-group`)
+### Access Group (`modules/access-group`)
 - **FAST Stage Alignment**: Stage 1 (Resource Manager) / Stage 3 (Tenant/Project Factory)
-- **Purpose**: Provisions GCP User Groups and FAST IAM role assignments to those groups. Agent service accounts are granted roles exclusively via group membership.
+- **Purpose**: Provisions GCP User Groups and FAST IAM role assignments to those groups. Agent service accounts are granted roles exclusively via these group memberships.
 - **Naming Enforced**: Cloud Identity group emails strictly enforce the FAST convention `${prefix}-${group_key}@${domain}` (e.g. `fast-agent-reviewer@thruput.com`).
 - **Inputs**:
   - `organization_id` (`string`, required): GCP Organization ID where groups reside.
   - `domain` (`string`, required): Primary domain name for Cloud Identity groups (e.g., `thruput.com`).
   - `prefix` (`string`, required): Mandatory FAST group naming prefix (e.g., `"fast-agent"`).
   - `group_definitions` (`map(object({ display_name = string, description = string }))`, required): Map of group keys to group metadata.
-  - `group_iam_roles` (`map(list(string))`, optional, default `{}`): Map of group keys to lists of GCP IAM role names.
+  - `group_iam_roles` (`map(list(string))`, required): Map of group keys to lists of GCP IAM role names assigned to the group.
 - **Outputs**:
   - `group_emails` (`map(string)`): Map of group keys to generated Cloud Identity group email addresses (`${prefix}-${group_key}@${domain}`).
   - `group_ids` (`map(string)`): Map of group keys to Cloud Identity group IDs.
   - `iam_bindings` (`map(list(string))`): Applied IAM role bindings per group key.
-- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
+- **ADR References**: [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md), [ADR-005](docs/adrs/005-modular-design.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 2. Agent Identity (`modules/agent-identity`)
+### Agent Identity (`modules/agent-identity`)
 - **FAST Stage Alignment**: Stage 3 (Project Factory / Tenant Project)
 - **Purpose**: Creates GCP Service Accounts with descriptive labels (`agent-call-name`, `agent-human-owner`) and **GitHub Workload Identity Federation (WIF)** bindings for zero-secret CI/CD & event publishing.
 - **Single Responsibility**: Manages SA identity and WIF impersonation bindings exclusively. Resource Manager tag bindings are cleanly delegated to `modules/resource-tagging/binding`.
@@ -54,11 +54,11 @@ All submodules in this project strictly comply with **[google-dev ADR 003](../..
   - `service_account_email` (`string`): Email address of the created service account.
   - `service_account_name` (`string`): Fully qualified resource name (`projects/.../serviceAccounts/...`).
   - `workload_identity_principal` (`string`): Workload Identity principal string for GitHub OIDC binding.
-- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
+- **ADR References**: [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md), [ADR-005](docs/adrs/005-modular-design.md), [ADR-008](docs/adrs/008-secret-management.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 3. Agent GitHub App (`modules/agent-github-app`)
+### Agent GitHub App (`modules/agent-github-app`)
 - **FAST Stage Alignment**: Stage 3 (Tenant Project)
 - **Purpose**: Configures GitHub App installations and repository-level access using the `integrations/github` provider.
 - **Pre-registered Secret Reference**: References pre-registered Secret Manager secret IDs (`pem_secret_id`) created out-of-band during App registration (ADR-008), using Terraform purely to manage repo installations, permissions, and IAM accessor bindings (`roles/secretmanager.secretAccessor`).
@@ -72,11 +72,11 @@ All submodules in this project strictly comply with **[google-dev ADR 003](../..
   - `app_id` (`string`): GitHub App ID.
   - `installation_id` (`string`): GitHub App Installation ID for target repositories.
   - `accessor_binding_id` (`string`): IAM secret accessor binding resource ID.
-- **ADR References**: [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
+- **ADR References**: [ADR-005](docs/adrs/005-modular-design.md), [ADR-008](docs/adrs/008-secret-management.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 4. Secret Access (`modules/secret-access`)
+### Secret Access (`modules/secret-access`)
 - **FAST Stage Alignment**: Stage 3 (Tenant Project)
 - **Purpose**: Provisions GCP Secret Manager secret shells (`google_secret_manager_secret`) and grants least-privilege `roles/secretmanager.secretAccessor` IAM roles to authorized agent service accounts.
 - **Out-of-Band Payloads**: Secret payload versions are populated out-of-band via GCP Secret Manager API/Console to prevent sensitive secret strings from entering Terraform state files.
@@ -89,32 +89,37 @@ All submodules in this project strictly comply with **[google-dev ADR 003](../..
   - `secret_id` (`string`): Fully qualified Secret Manager secret ID.
   - `secret_name` (`string`): Secret resource name.
   - `accessor_bindings` (`list(string)`): Applied IAM accessor role bindings.
-- **ADR References**: [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
+- **ADR References**: [ADR-005](docs/adrs/005-modular-design.md), [ADR-008](docs/adrs/008-secret-management.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 5. Resource Tagging (`modules/resource-tagging`)
-- **FAST Stage Alignment**: Stage 1 (Resource Manager - Keys/Values) / Stage 3 (Tenant Stage - Bindings)
-- **Purpose**: Structure split into two explicit sub-modules to eliminate conditional branching logic:
-  - **`modules/resource-tagging/key`** (Stage 1): Manages GCP Resource Manager tag keys and tag values at Organization or Folder parent levels (`google_tags_tag_key`, `google_tags_tag_value`).
-  - **`modules/resource-tagging/binding`** (Stage 3): Attaches Tag Value Bindings (`google_tags_tag_binding`) to specific target resources (service accounts, projects, folders).
-- **Submodule 5a Inputs (`modules/resource-tagging/key`)**:
+### Resource Tagging Key (`modules/resource-tagging/key`)
+- **FAST Stage Alignment**: Stage 1 (Resource Manager)
+- **Purpose**: Provisions GCP Resource Manager tag keys (`google_tags_tag_key`) and allowed tag values (`google_tags_tag_value`) at Organization or Folder parent levels.
+- **Inputs**:
   - `parent_id` (`string`, required): GCP Organization or Folder ID (`organizations/...` or `folders/...`).
   - `tag_key_short_name` (`string`, required): Short name of the tag key (e.g., `agent-type`).
   - `tag_values` (`list(string)`, required): Allowed tag value short names (e.g. `["reviewer", "coder", "executor"]`).
-- **Submodule 5a Outputs (`modules/resource-tagging/key`)**:
+- **Outputs**:
   - `tag_key_id` (`string`): Fully qualified Tag Key ID (`tagKeys/...`).
   - `tag_value_ids` (`map(string)`): Map of tag value short names to fully qualified Tag Value IDs (`tagValues/...`).
-- **Submodule 5b Inputs (`modules/resource-tagging/binding`)**:
-  - `parent_resource` (`string`, required): Target GCP resource full name (e.g. service account or project ID).
-  - `tag_value_id` (`string`, required): Fully qualified Tag Value ID (`tagValues/...`).
-- **Submodule 5b Outputs (`modules/resource-tagging/binding`)**:
-  - `tag_binding_id` (`string`): Tag Binding resource ID.
-- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
+- **ADR References**: [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md), [ADR-005](docs/adrs/005-modular-design.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 6. Agent Mailbox (`modules/agent-mailbox`)
+### Resource Tagging Binding (`modules/resource-tagging/binding`)
+- **FAST Stage Alignment**: Stage 3 (Tenant Stage)
+- **Purpose**: Attaches Tag Value Bindings (`google_tags_tag_binding`) to specific target GCP resources (such as service accounts, projects, or folders).
+- **Inputs**:
+  - `parent_resource` (`string`, required): Target GCP resource full name (e.g. service account or project ID).
+  - `tag_value_id` (`string`, required): Fully qualified Tag Value ID (`tagValues/...`).
+- **Outputs**:
+  - `tag_binding_id` (`string`): Tag Binding resource ID.
+- **ADR References**: [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md), [ADR-005](docs/adrs/005-modular-design.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
+
+---
+
+### Agent Mailbox (`modules/agent-mailbox`)
 - **FAST Stage Alignment**: Stage 3 (Tenant Stage)
 - **Purpose**: Provisions Google Workspace agent email aliases using the official `hashicorp/googleworkspace` provider with Domain-Wide Delegation.
 - **Inputs**:
@@ -124,11 +129,11 @@ All submodules in this project strictly comply with **[google-dev ADR 003](../..
 - **Outputs**:
   - `alias_email` (`string`): Agent email alias address (`<call-name>@domain`).
   - `primary_mailbox` (`string`): Primary mailbox address.
-- **ADR References**: [ADR-005](../../adrs/005-modular-design.md)
+- **ADR References**: [ADR-005](docs/adrs/005-modular-design.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
 
 ---
 
-### 7. MCP Server Runtime (`modules/mcp-server`)
+### MCP Server Runtime (`modules/mcp-server`)
 - **FAST Stage Alignment**: Stage 3 (Project Factory / Tenant Project)
 - **Purpose**: Provisions containerized serverless compute (Cloud Run) for Model Context Protocol (MCP) tool endpoints.
 - **Security & Identity Architecture**:
@@ -148,4 +153,4 @@ All submodules in this project strictly comply with **[google-dev ADR 003](../..
   - `service_name` (`string`): Cloud Run service name.
   - `service_id` (`string`): Fully qualified Cloud Run resource ID.
   - `location` (`string`): Deployed GCP region.
-- **ADR References**: [ADR-001](../../adrs/001-pure-terraform-provider-project.md), [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
+- **ADR References**: [ADR-001](docs/adrs/001-pure-terraform-provider-project.md), [ADR-004](docs/adrs/004-fast-stage-integration-pattern.md), [ADR-005](docs/adrs/005-modular-design.md), [ADR-008](docs/adrs/008-secret-management.md), [ADR-011](docs/adrs/011-mcp-server-runtime-architecture.md), [ADR-012](docs/adrs/012-deterministic-infrastructure.md)
