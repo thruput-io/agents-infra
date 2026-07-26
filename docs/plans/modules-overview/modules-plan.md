@@ -24,20 +24,24 @@ This document defines the complete set of single-responsibility Terraform module
 
 ### 2. Agent Identity (`modules/agent-identity`)
 - **FAST Stage Alignment**: Stage 3 (Project Factory / Tenant Project)
-- **Purpose**: Creates GCP Service Accounts with descriptive labels (`agent-call-name`, `agent-human-owner`) and Resource Manager tag bindings (`agent-type`).
+- **Purpose**: Creates GCP Service Accounts with descriptive labels (`agent-call-name`, `agent-human-owner`), Resource Manager tag bindings (`agent-type`), and **GitHub Workload Identity Federation (WIF)** bindings for zero-secret CI/CD & event publishing.
+- **Zero-Secret Integration**: Integrates directly with FAST Stage 0 Workload Identity Pools (`projects/*/locations/global/workloadIdentityPools/github-pool`) to bind `roles/iam.workloadIdentityUser` and `roles/pubsub.publisher` to target GitHub repositories without any static service account keys.
 - **Inputs**:
   - `project_id` (`string`, required): GCP Project ID where the service account will be created.
   - `agent_call_name` (`string`, required): Short call name of the agent (e.g., `gustaf`).
   - `human_owner` (`string`, required): Email or username of the human owner (e.g., `johan.granlund`).
   - `agent_type` (`string`, required): Agent classification type (e.g., `reviewer`, `coder`, `executor`).
+  - `workload_identity_pool` (`string`, optional): FAST Stage 0 Workload Identity Pool name for GitHub federation.
+  - `github_repository` (`string`, optional): Target GitHub repository (`owner/repo`) allowed to impersonate this agent SA.
   - `group_memberships` (`list(string)`, optional, default `[]`): List of user group emails to add this service account to.
   - `custom_labels` (`map(string)`, optional, default `{}`): Additional resource labels.
 - **Outputs**:
   - `service_account_id` (`string`): Unique GCP ID of the created service account.
   - `service_account_email` (`string`): Email address of the created service account.
   - `service_account_name` (`string`): Fully qualified resource name (`projects/.../serviceAccounts/...`).
+  - `workload_identity_principal` (`string`): Workload Identity principal string for GitHub OIDC binding.
   - `tag_bindings` (`map(string)`): Map of Resource Manager tag bindings applied to the service account.
-- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md)
+- **ADR References**: [ADR-004](../../adrs/004-fast-stage-integration-pattern.md), [ADR-005](../../adrs/005-modular-design.md), [ADR-008](../../adrs/008-secret-management.md)
 
 ---
 
