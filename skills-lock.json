@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "fabric-builder": {
+      "source": "GoogleCloudPlatform/cloud-foundation-fabric",
+      "sourceType": "github",
+      "skillPath": "skills/fabric-builder/SKILL.md",
+      "computedHash": "de8f4c19c987ed9a2591f8990d0793b3db9558257ce6ac1c35cd449f1a8237ed"
+    },
+    "fast-0-org-setup-prereqs": {
+      "source": "GoogleCloudPlatform/cloud-foundation-fabric",
+      "sourceType": "github",
+      "skillPath": "skills/fast/prerequisites/SKILL.md",
+      "computedHash": "4b6f54d414044e7544814436d198a4684fb99eb625d498479b293dfc5331ec3f"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "release-process": {
+      "source": "GoogleCloudPlatform/cloud-foundation-fabric",
+      "sourceType": "github",
+      "skillPath": "skills/maintenance/release-process/SKILL.md",
+      "computedHash": "8373aaf48795f09e8c0941ef744955c61f4216ec04fbdddfad3dc4c31f1d615f"
+    }
+  }
+}
