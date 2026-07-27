@@ -1,6 +1,6 @@
 # Implementation Plan: Automated PR Reviewer Flow
 
-This document details the first concrete implementation plan for the **Automated PR Reviewer Flow** on `thruput-io/agents-infra`. 
+This document details the concrete implementation plan for the **Automated PR Reviewer Flow** on `thruput-io/agents-infra`. 
 
 To adhere strictly to YAGNI and governance principles, this plan defines **EXACTLY** and **ONLY** the minimal parameter contracts and module configurations required to execute the PR reviewer workflow. Zero speculative parameters or future-proofing inputs are included.
 
@@ -13,7 +13,7 @@ The Automated PR Reviewer enables headless, zero-secret PR reviews on `thruput-i
 ```mermaid
 sequenceDiagram
     autonumber
-    actor GHA as GitHub Actions (PR Event)
+    actor GHA as GitHub Actions Workflow
     participant WIF as GCP Workload Identity
     participant SA as Invoking Agent SA<br/>(agent-reviewer)
     participant Run as MCP Server (Cloud Run)<br/>(mcp-github-reviewer)
@@ -33,7 +33,23 @@ sequenceDiagram
 
 ---
 
-## 2. Strict Minimal Module Interface Contracts
+## 2. Confirmed Design Decisions (Deep Interview Matrix)
+
+| Design Axis | Confirmed Decision | Rationale & Governance Alignment |
+| :--- | :--- | :--- |
+| **Credential Mechanism** | Pre-registered GitHub App PEM private key (`github-app-pem-reviewer`) | Out-of-band secret management per [ADR-008](../../adrs/008-secret-management.md). |
+| **WIF Impersonation Scope** | `assertion.repository == 'thruput-io/agents-infra'` | Allows any workflow event on `thruput-io/agents-infra` to impersonate `agent-reviewer`. |
+| **Review Authority** | Full voting rights (`pull_requests = "write"`, `checks = "write"`, `contents = "read"`) | Bot can post inline comments, request changes, and submit formal PR approvals. |
+| **Secret Lifecycle** | Dynamic `"latest"` secret version lookup | Zero-downtime key rotation out-of-band without Terraform state modifications. |
+| **Cloud Run Scaling** | `min_instances = 0`, `max_instances = 5`, `concurrency = 80` | Serverless zero-idle cost scaling for bursty PR events. |
+| **Network Ingress** | `ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"` | Endpoint hidden from public internet per [ADR-011](../../adrs/011-mcp-server-runtime-architecture.md). |
+| **Network Egress** | Direct Internet Egress (optional `vpc_connector` support) | Enables agent to perform web research/docs lookups; FAST Stage 2 connector compatible. |
+| **GCP IAM Group Roles** | `roles/viewer` + `roles/run.invoker` for `fast-agent-reviewer@thruput.com` | Strict 3-tier SA identity separation ([ADR-011](../../adrs/011-mcp-server-runtime-architecture.md)). |
+| **Test Strategy** | Contract & Plan Validation Harness under `tests/integration/pr-reviewer/` | Follows Google Cloud FAST testing patterns (`terraform validate` + dry-run `plan`). |
+
+---
+
+## 3. Strict Minimal Module Interface Contracts
 
 ### 1. Access Group (`modules/access-group`)
 - **Purpose**: Creates the Cloud Identity group for reviewer agents and assigns required GCP IAM roles.
@@ -92,30 +108,31 @@ sequenceDiagram
   - `container_image` (`string`, required): Container image URL in Artifact Registry.
   - `mcp_service_account_email` (`string`, required): Dedicated MCP runtime SA.
   - `invoker_service_account_email` (`string`, required): `agent-reviewer@<project>.iam.gserviceaccount.com`.
+  - `vpc_connector` (`string`, optional, default `null`): Optional FAST Stage 2 Serverless VPC Access connector name.
 - **Minimal Outputs**:
   - `service_url` (`string`): Private HTTPS endpoint URL of the MCP server.
 
 ---
 
-## 3. Implementation Task Breakdown & Execution Plan
+## 4. Implementation Task Breakdown & Execution Plan
 
-### Phase 1: Module Scaffolding & Directory Setup
-- [ ] Task 1.1: Initialize `modules/access-group` with `main.tf`, `variables.tf`, `outputs.tf`.
-- [ ] Task 1.2: Initialize `modules/secret-access` with `main.tf`, `variables.tf`, `outputs.tf`.
-- [ ] Task 1.3: Initialize `modules/agent-identity` with `main.tf`, `variables.tf`, `outputs.tf`.
-- [ ] Task 1.4: Initialize `modules/agent-github-app` with `main.tf`, `variables.tf`, `outputs.tf`.
-- [ ] Task 1.5: Initialize `modules/mcp-server` with `main.tf`, `variables.tf`, `outputs.tf`.
+### Phase 1: Submodule Scaffolding
+- [ ] Task 1.1: Initialize `modules/access-group` (`main.tf`, `variables.tf`, `outputs.tf`).
+- [ ] Task 1.2: Initialize `modules/secret-access` (`main.tf`, `variables.tf`, `outputs.tf`).
+- [ ] Task 1.3: Initialize `modules/agent-identity` (`main.tf`, `variables.tf`, `outputs.tf`).
+- [ ] Task 1.4: Initialize `modules/agent-github-app` (`main.tf`, `variables.tf`, `outputs.tf`).
+- [ ] Task 1.5: Initialize `modules/mcp-server` (`main.tf`, `variables.tf`, `outputs.tf`).
 
-### Phase 2: First-Party Test Harness & Integration Validation
-- [ ] Task 2.1: Create end-to-end integration test harness under `tests/integration/pr-reviewer/` wiring the 5 submodules together.
-- [ ] Task 2.2: Validate `terraform fmt`, `terraform validate`, and `tflint` across all created submodules.
-- [ ] Task 2.3: Execute dry-run `terraform plan` against test environment to verify zero speculative inputs or state leaks.
+### Phase 2: Integration Test Harness & Validation
+- [ ] Task 2.1: Create `tests/integration/pr-reviewer/main.tf` wiring all 5 submodules together with mock inputs.
+- [ ] Task 2.2: Validate `terraform fmt -check`, `terraform validate`, and `tflint` across all submodules.
+- [ ] Task 2.3: Execute dry-run `terraform plan` on the test harness to verify zero state leaks and strict contract enforcement.
 
 ---
 
-## 4. Evidence & Verification Requirements
+## 5. Evidence & Verification Requirements
 
 Every task completed under this plan requires working proof:
-1. **Lint & Validation Proof**: Output logs of `terraform fmt -check`, `terraform validate`, and `tflint` for every created module directory.
-2. **Contract Strictness Proof**: Verification that zero default values or speculative inputs exist in `variables.tf`.
-3. **Execution Plan Output**: Redacted `terraform plan` output demonstrating clean resource creation.
+1. **Lint & Validation Proof**: Logs of `terraform fmt -check`, `terraform validate`, and `tflint` for every created module directory.
+2. **Contract Strictness Proof**: Verification that zero speculative inputs or defaults exist in `variables.tf`.
+3. **Execution Plan Output**: Redacted `terraform plan` output from `tests/integration/pr-reviewer/` proving clean resource graph creation.
