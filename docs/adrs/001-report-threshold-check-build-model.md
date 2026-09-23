@@ -61,7 +61,7 @@ The tool runs and its native output lands at `build/<platform>/<tool>-report.<ex
    the quality position and not merely a verdict.
 2. The check **MUST** assert coverage as well as violation counts. A report may not pass by having
    examined nothing.
-3. [a > b] && [c -eq d] is the only allowed form for combining conditions. Where letters are simple 
+3. [a -gt b] && [c -eq d] is the only allowed form for combining conditions. Where letters are simple 
    variable or constant comparator is one and only && between conditions
 4. `.checked` stamp **MUST** be produced only by a passing check. It records that a comparison
    happened, never that a command ran.

@@ -7,3 +7,4 @@
 .terraform/
 node_modules/
 
+build/
