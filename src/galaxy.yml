@@ -1,0 +1,10 @@
+---
+namespace: thruput
+name: local_runtime
+version: 0.1.0
+readme: README.md
+authors:
+  - Thruput
+description: Declarative local runtime for unprivileged agent accounts.
+license_file: LICENSE
+repository: https://github.com/thruput-io/agents-infra

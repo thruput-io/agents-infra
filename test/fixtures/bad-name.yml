@@ -1,0 +1,6 @@
+---
+agents:
+  - name: Agent Paula
+    uid: 505
+    real_name: Agent Paula
+    shell: /bin/zsh

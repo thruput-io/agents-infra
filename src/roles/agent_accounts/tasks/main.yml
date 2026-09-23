@@ -1,0 +1,20 @@
+---
+- name: Ensure the shared agent group exists
+  become: true
+  ansible.builtin.group:
+    name: "{{ agent_accounts_group }}"
+    gid: "{{ agent_accounts_group_gid }}"
+    state: present
+
+- name: Ensure each agent account exists
+  become: true
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid }}"
+    group: "{{ agent_accounts_group }}"
+    comment: "{{ item.real_name }}"
+    shell: "{{ item.shell }}"
+    state: present
+  loop: "{{ agents }}"
+  loop_control:
+    label: "{{ item.name }}"

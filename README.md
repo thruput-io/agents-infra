@@ -25,10 +25,10 @@ the machine on every run, so drift is detected rather than assumed.
 | `src/schemas/` | the schemas every site document is parsed against |
 | `inventory/` | site data — which agents exist, which paths are shared |
 | `test/` | bats unit tests and container fixtures |
-| `scripts/` | logic the Makefile dispatches to |
+| `scripts/` | build and test logic the Makefile dispatches to |
 | `thresholds.json` | the permitted error, warning and test counts |
 | `docs/adrs/` | decisions that are fixed |
-| `build/<platform>/` | untouched tool reports, stamps and generated config, never committed |
+| `build/` | untouched tool reports, stamps and generated config, never committed |
 
 ## Desired state
 
@@ -62,14 +62,14 @@ Homebrew on the shared host is owned by the privileged account. Consequently:
 ## Build model
 
 Every quality tool runs as three separate targets: the tool emits its native report untouched into
-`build/<platform>/`, `thresholds.json` declares what is permitted, and a `.checked` target compares
-the report against those thresholds and against the counts in `stats.mk`, printing measured against
-allowed.
+`build/`, `thresholds.json` declares what is permitted, and a `.checked` target in the Makefile
+compares the report against those thresholds and against the counts in `stats.mk`, printing measured
+against allowed. The comparison is inlined in the Makefile, not delegated to a script.
 
 ```
-yamllint: 24 files declared, not reported enumerated, 0 errors (allowed 0), 0 warnings (allowed 0)
-shellcheck: 8 files declared, 8 enumerated, 0 errors (allowed 0), 0 warnings (allowed 0)
-bats: 10 tests across 2 files, 0 failures, minimum 10
+yamllint: 24 files declared (minimum 20), 0 errors (allowed 0), 0 warnings (allowed 0)
+shellcheck: 10 files enumerated of 10 declared (minimum 6), 0 errors (allowed 0), 0 warnings (allowed 0)
+bats: 10 tests (minimum 10) across 2 files (minimum 2), 0 failures
 ```
 
 A `.checked` stamp means a comparison passed, never that a command ran. Coverage is asserted too,

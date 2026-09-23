@@ -1,0 +1,22 @@
+---
+name: verifications
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint, schema and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make container-test
+
+  integration:
+    name: Playbook integration test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make integration-test
