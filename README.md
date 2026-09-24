@@ -26,7 +26,6 @@ the machine on every run, so drift is detected rather than assumed.
 | `inventory/` | site data — which agents exist, which paths are shared |
 | `test/` | bats unit tests and container fixtures |
 | `scripts/` | build and test logic the Makefile dispatches to |
-| `thresholds.json` | the permitted error, warning and test counts |
 | `docs/adrs/` | decisions that are fixed |
 | `build/` | untouched tool reports, stamps and generated config, never committed |
 
@@ -61,20 +60,31 @@ Homebrew on the shared host is owned by the privileged account. Consequently:
 
 ## Build model
 
-Every quality tool runs as three separate targets: the tool emits its native report untouched into
-`build/`, `thresholds.json` declares what is permitted, and a `.checked` target in the Makefile
-compares the report against those thresholds and against the counts in `stats.mk`, printing measured
+Every quality tool runs as separate targets: the tool emits its native report untouched into
+`build/`, and a `.checked` target in the Makefile reads the report in place and compares it against
+the thresholds written in that recipe and against the counts in `stats.mk`, printing measured
 against allowed. The comparison is inlined in the Makefile, not delegated to a script.
 
 ```
-yamllint: 24 files declared (minimum 20), 0 errors (allowed 0), 0 warnings (allowed 0)
-shellcheck: 10 files enumerated of 10 declared (minimum 6), 0 errors (allowed 0), 0 warnings (allowed 0)
-bats: 10 tests (minimum 10) across 2 files (minimum 2), 0 failures
+yamllint: files 24/20 errors 0/0 warnings 0/0
+shellcheck: files 4/4 errors 0/0 warnings 0/0
+bats: files 4/3 tests 26/14 failures 0/0
 ```
 
-A `.checked` stamp means a comparison passed, never that a command ran. Coverage is asserted too,
-so a tool that examined nothing fails rather than passes. The model is fixed by
-[ADR 001](docs/adrs/001-report-threshold-check-build-model.md).
+No report recipe absorbs a tool's exit status: a tool that finds something exits non-zero, its
+report still lands on disk, and the build stops right there, before the corresponding `.checked`
+target ever runs. Before any report is generated, `build/versions.txt` asks every tool for its
+version, so a missing or broken install fails the build at once rather than leaving an empty
+report that a check would read as clean. `test/makefile.bats` pins both: planting one finding per
+tool shows the report lands and the build stops without reaching the check's summary line, and
+replacing a tool on `PATH` with a broken stand-in shows the versions gate fails before any report
+exists.
+
+`.checked` produces no file: the targets are phony, so the comparison — cheap by design — runs
+every time rather than being trusted from a stamp. Coverage is asserted too, so a tool that
+examined nothing fails rather than passes. The model is fixed by
+[ADR 001](docs/adrs/001-report-threshold-check-build-model.md), matching how
+[gettoken PR #50](https://github.com/thruput-io/gettoken/pull/50) settled the same question.
 
 ## Targets
 
@@ -86,4 +96,4 @@ so a tool that examined nothing fails rather than passes. The model is fixed by
 | `make integration-test` | run the playbook twice in a container, asserting idempotency |
 | `make plan` | report drift, change nothing |
 | `make apply` | reconcile the host |
-| `make collection` | build the collection tarball into `build/<platform>/` |
+| `make collection` | build the collection tarball into `build/` |

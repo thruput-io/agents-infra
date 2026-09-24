@@ -8,7 +8,7 @@ A quality tool invoked directly from a Make recipe answers only "pass" or "fail"
 so many ways to get it wrong this ADR tries to lower the risk of it happening. Hidden lint
 and test errors are the most harmful and fails entire projects.
 
-## Decision 
+## Decision
 
 This ADR **MUST** be followed without exception as written no interpretations
 
@@ -18,7 +18,7 @@ other rules might need to bend. Cleanliness to prevent obfuscation always has pr
 Defaulting of any kind is not allowed.
 
 A quality tool is, but not limited to:
-- Test executioner with test result 
+- Test executioner with test result
 - Coverage collector with coverage
 - Linter with linting result
 - schema verifier with report
@@ -31,27 +31,32 @@ Invocation **MUST** must be as simple and clear as possible, never any indirecti
 test: test-tool -R src/test > build/linux/test-report.json (good)
 
 #### Bad
-test: test-tool $(params) ($SOURCES) | jg 'result' > build/linux/test-report.json (bad)
+test: test-tool $(params) ($SOURCES) | jg 'result' > build/test-module/test-report.json (bad)
 
 ### 1. Report
 
 The tool runs and its native output lands at `build/<platform>/<tool>-report.<ext>`.
 
-1. The report **MUST** land untouched. Normalization, filtering, reformatting, or merging 
-   **MUST NOT** be allowed, report that has been rewritten is no longer evidence of what 
+1. The report **MUST** land untouched. Normalization, filtering, reformatting, or merging
+   **MUST NOT** be allowed, report that has been rewritten is no longer evidence of what
    the tool found.
-2. **MUST NOT**  No manipulating or default of error codes to move decisions to Check or any other
-    similar claims.
+2. An exit code **MUST NOT** be defaulted or rewritten. A tool that exits non-zero because it
+   found something still leaves its report on disk, but the recipe **MUST** be left to fail on
+   that exit code: the build stops right there, with the tool's own output, instead of carrying
+   on to a check stage that would only repeat the verdict.
 3. .DELETE_ON_ERROR **MUST NOT** be used as it destroys evidence and makes bug-finding impossible
+4. Before any report is generated, every tool a check depends on **MUST** be proven to run, not
+   merely found on `PATH`: `build/versions.txt` asks each one for its version, so a missing or
+   broken install fails the build immediately, before an empty report could be mistaken for a
+   clean run.
 
 ### 2. Threshold
 
-`thresholds.json` declares, per tool, the permitted `errors` and `warnings`, `min_tests`, `min_coverage`. `min_files`
+Threshold constants are hardcoded directly inside each target's `.checked` check recipe where they are evaluated.
 
-1. Thresholds **MUST** live in `thresholds.json`, never in a recipe or a flag.
+1. Threshold values (e.g. max 0 lint errors, min 10 tests, floor 22% bash coverage) **MUST** be explicitly written directly in the check assertion recipe.
 2. A threshold **MUST NOT** be raised to make a build pass. Raising one is a reviewable change to
    the repository's quality bar.
-
 
 ### 3. Check
 
@@ -61,7 +66,7 @@ The tool runs and its native output lands at `build/<platform>/<tool>-report.<ex
    the quality position and not merely a verdict.
 2. The check **MUST** assert coverage as well as violation counts. A report may not pass by having
    examined nothing.
-3. [a -gt b] && [c -eq d] is the only allowed form for combining conditions. Where letters are simple 
+3. [a -gt b] && [c -eq d] is the only allowed form for combining conditions. Where letters are simple
    variable or constant comparator is one and only && between conditions
-4. `.checked` stamp **MUST** be produced only by a passing check. It records that a comparison
-   happened, never that a command ran.
+4. `.checked` **MUST** produce no file. The comparison is cheap, so it runs every time; the
+   targets **MUST** be phony.
