@@ -1,0 +1,9 @@
+---
+- name: Ensure the collaboration surface is group owned and setgid
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    group: "{{ shared_surface_group }}"
+    mode: "2775"
+  loop: "{{ shared_surface_paths }}"

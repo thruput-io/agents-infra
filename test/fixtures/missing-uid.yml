@@ -1,0 +1,5 @@
+---
+agents:
+  - name: paula
+    real_name: Agent Paula
+    shell: /bin/zsh

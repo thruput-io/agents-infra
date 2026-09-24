@@ -1,0 +1,10 @@
+---
+agents:
+  - name: paula
+    uid: 505
+    real_name: Agent Paula
+    shell: /bin/zsh
+  - name: paula
+    uid: 505
+    real_name: Agent Paula
+    shell: /bin/zsh

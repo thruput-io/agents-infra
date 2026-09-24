@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thruput-io/agents-infra/blob/main/src/schemas/agents.schema.json",
+  "title": "Agent accounts desired state",
+  "type": "object",
+  "required": ["agents"],
+  "additionalProperties": false,
+  "properties": {
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/agent" }
+    }
+  },
+  "$defs": {
+    "agent": {
+      "type": "object",
+      "required": ["name", "uid", "real_name", "shell"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,30}$" },
+        "uid": { "type": "integer", "minimum": 501, "maximum": 999 },
+        "real_name": { "type": "string", "minLength": 1 },
+        "shell": { "type": "string", "pattern": "^/" }
+      }
+    }
+  }
+}

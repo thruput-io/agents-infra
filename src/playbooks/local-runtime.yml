@@ -1,0 +1,7 @@
+---
+- name: Local agent runtime
+  hosts: all
+  gather_facts: true
+  roles:
+    - agent_accounts
+    - shared_surface
