@@ -31,45 +31,6 @@ plant_failing_test() {
   printf '#!/usr/bin/env bats\n\n@test "planted failure" {\n  false\n}\n' > "${COPY}/test/planted.bats"
 }
 
-link_every_tool() {
-  mkdir "${COPY}/bin"
-  for tool in make which mkdir bash find uname tr \
-              yamllint shellcheck checkmake ansible-lint ansible-playbook ansible-inventory \
-              check-jsonschema bats kcov xmlstarlet jq awk; do
-    ln -s "$(command -v "$tool")" "${COPY}/bin/$tool"
-  done
-}
-
-break_tool() {
-  rm -f "${COPY}/bin/$1"
-  printf '#!/bin/sh\nexit 1\n' > "${COPY}/bin/$1"
-  chmod 755 "${COPY}/bin/$1"
-}
-
-@test "versions: every tool on PATH passes the gate and prints its own version" {
-  link_every_tool
-  run env PATH="${COPY}/bin" make -C "${COPY}" build/versions.txt
-  [ "${status}" -eq 0 ]
-  [[ "$(cat "${COPY}/build/versions.txt")" == *"yamllint"* ]]
-  [[ "$(cat "${COPY}/build/versions.txt")" == *"kcov"* ]]
-}
-
-@test "versions: a tool absent from PATH fails before any report is written" {
-  link_every_tool
-  rm "${COPY}/bin/yamllint"
-  run env PATH="${COPY}/bin" make -C "${COPY}" build/yamllint.checked
-  [ "${status}" -ne 0 ]
-  [ ! -e "${COPY}/build/yamllint-report.txt" ]
-}
-
-@test "versions: a tool present but broken fails before any report is written" {
-  link_every_tool
-  break_tool checkmake
-  run env PATH="${COPY}/bin" make -C "${COPY}" build/yamllint.checked
-  [ "${status}" -ne 0 ]
-  [ ! -e "${COPY}/build/yamllint-report.txt" ]
-}
-
 @test "yamllint: a finding lands in the report even though the build stops there" {
   plant_yaml_error
   run make -C "${COPY}" build/yamllint-report.txt

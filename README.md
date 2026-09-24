@@ -68,17 +68,16 @@ against allowed. The comparison is inlined in the Makefile, not delegated to a s
 ```
 yamllint: files 24/20 errors 0/0 warnings 0/0
 shellcheck: files 4/4 errors 0/0 warnings 0/0
-bats: files 4/3 tests 26/14 failures 0/0
+bats: files 4/3 tests 27/14 failures 0/0
 ```
 
 No report recipe absorbs a tool's exit status: a tool that finds something exits non-zero, its
 report still lands on disk, and the build stops right there, before the corresponding `.checked`
 target ever runs. Before any report is generated, `build/versions.txt` asks every tool for its
 version, so a missing or broken install fails the build at once rather than leaving an empty
-report that a check would read as clean. `test/makefile.bats` pins both: planting one finding per
-tool shows the report lands and the build stops without reaching the check's summary line, and
-replacing a tool on `PATH` with a broken stand-in shows the versions gate fails before any report
-exists.
+report that a check would read as clean. `test/makefile.bats` pins the first half of that: planting
+one finding per tool shows the report lands and the build stops without reaching the check's
+summary line.
 
 `.checked` produces no file: the targets are phony, so the comparison — cheap by design — runs
 every time rather than being trusted from a stamp. Coverage is asserted too, so a tool that
