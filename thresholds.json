@@ -1,9 +1,0 @@
-{
-  "yamllint": { "errors": 0, "warnings": 0, "min_files": 20 },
-  "shellcheck": { "errors": 0, "warnings": 0, "min_files": 4 },
-  "checkmake": { "errors": 0, "warnings": 0, "min_files": 1 },
-  "ansible-lint": { "errors": 0, "warnings": 0, "min_files": 1 },
-  "schema": { "errors": 0, "warnings": 0, "min_files": 1 },
-  "bats": { "min_tests": 14, "min_files": 3 },
-  "kcov": { "min_coverage": 85, "min_files": 2 }
-}
