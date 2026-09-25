@@ -11,6 +11,9 @@ To enable automated AI agents (like `rasmus`) to securely interact with Google C
 2. **Dedicated Pub/Sub Topics**: One Pub/Sub topic per agent identity (`topics/rasmus-chat-events`) handles inbound messages from Google Chat.
 3. **Attribute-Based Cloud Run Auto-Wakeup**: Pub/Sub Push subscriptions filter messages using `attributes.target = "johans-laptop"`. Sleeping containers only wake up when explicitly targeted, preserving zero-cost idle state.
 
+> [!IMPORTANT]
+> **Service Account Security Boundary**: While the GCP Service Account (`rasmus-agent-sa`) represents the canonical identity of the agent, **direct key access or raw credential export to the Service Account is NEVER granted**. Minting tokens via GitHub App credentials and Workload Identity Federation (WIF) only issues short-lived, dynamically scoped OAuth access tokens (`https://www.googleapis.com/auth/chat.bot`) evaluated against strict CEL attribute constraints. No static Service Account key files are ever created, exported, or exposed to the agent or GitHub.
+
 ### Cross-References
 
 | Repository | Branch / PR | Plan Specification |
