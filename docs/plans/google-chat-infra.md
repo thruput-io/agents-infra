@@ -11,6 +11,12 @@ To enable automated AI agents (like `rasmus`) to securely interact with Google C
 2. **Dedicated Pub/Sub Topics**: One Pub/Sub topic per agent identity (`topics/rasmus-chat-events`) handles inbound messages from Google Chat.
 3. **Attribute-Based Cloud Run Auto-Wakeup**: Pub/Sub Push subscriptions filter messages using `attributes.target = "johans-laptop"`. Sleeping containers only wake up when explicitly targeted, preserving zero-cost idle state.
 
+### Cross-References
+
+| Repository | Branch / PR | Plan Specification |
+|---|---|---|
+| `thruput-io/gettoken` | [`001-mezzy-google-chat`](https://github.com/thruput-io/gettoken/tree/001-mezzy-google-chat) | [`docs/plans/mezzy-google-chat/001-mezzy-google-chat.md`](https://github.com/thruput-io/gettoken/blob/001-mezzy-google-chat/docs/plans/mezzy-google-chat/001-mezzy-google-chat.md) |
+
 ---
 
 ## 2. Infrastructure Components
