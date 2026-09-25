@@ -39,7 +39,8 @@
       --workload-identity-pool "{{ wif_pool_name }}"
       --location "global"
       --issuer-uri "https://token.actions.githubusercontent.com"
-      --attribute-mapping "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository"
+      --attribute-mapping
+      "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository"
       --attribute-condition "attribute.repository == '{{ github_repo }}' && attribute.actor == '{{ agent_name }}'"
       --project "{{ gcp_project_id }}"
   register: provider_create_result
@@ -51,7 +52,10 @@
     cmd: >
       gcloud iam service-accounts add-iam-policy-binding "{{ service_account_email }}"
       --role "roles/iam.workloadIdentityUser"
-      --member "principalSet://iam.googleapis.com/projects/{{ gcp_project_id }}/locations/global/workloadIdentityPools/{{ wif_pool_name }}/attribute.repository/{{ github_repo }}"
+      --member
+      "principalSet://iam.googleapis.com/projects/{{ gcp_project_id }}/\
+      locations/global/workloadIdentityPools/{{ wif_pool_name }}/\
+      attribute.repository/{{ github_repo }}"
       --project "{{ gcp_project_id }}"
   changed_when: true
 
