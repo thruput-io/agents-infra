@@ -36,12 +36,15 @@ Agents are declared as a list in `inventory/group_vars/all/agents.yml`:
 ```yaml
 agents:
   - name: paula
-    uid: 505
     real_name: Agent Paula
     shell: /bin/zsh
 ```
 
-The schema constrains uids to the 501-999 range, requires posix login names,
+`uid` is not part of the desired state: macOS assigns each account's id via
+`dscl` when it's created, and reconciliation never manages it afterward.
+Nothing in this repo reads a specific uid, and none is needed to keep an
+account's files correctly owned across a rebuild, since a rebuild redeclares
+the shared surface's permissions too. The schema requires posix login names,
 rejects unknown properties, and rejects identical entries.
 
 JSON Schema has no unique-by-property keyword, so a repeated name carrying a

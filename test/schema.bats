@@ -11,10 +11,9 @@ setup() {
   [ "${status}" -eq 0 ]
 }
 
-@test "an agent missing uid is rejected" {
-  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/missing-uid.yml"
-  [ "${status}" -ne 0 ]
-  [[ "${output}" == *"'uid' is a required property"* ]]
+@test "an agent without a uid is accepted" {
+  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/no-uid.yml"
+  [ "${status}" -eq 0 ]
 }
 
 @test "an unknown agent property is rejected" {
@@ -23,10 +22,10 @@ setup() {
   [[ "${output}" == *"Additional properties are not allowed"* ]]
 }
 
-@test "a uid below the agent range is rejected" {
-  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/uid-below-range.yml"
+@test "a uid is rejected" {
+  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/has-uid.yml"
   [ "${status}" -ne 0 ]
-  [[ "${output}" == *"less than the minimum of 501"* ]]
+  [[ "${output}" == *"Additional properties are not allowed"* ]]
 }
 
 @test "a name that is not a posix login name is rejected" {
@@ -41,7 +40,7 @@ setup() {
   [[ "${output}" == *"has non-unique elements"* ]]
 }
 
-@test "the schema alone cannot reject a repeated name carrying a different uid" {
-  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/same-name-different-uid.yml"
+@test "the schema alone cannot reject a repeated name carrying a different real_name" {
+  run check-jsonschema --schemafile "${SCHEMA}" "${FIXTURES}/same-name-different-real-name.yml"
   [ "${status}" -eq 0 ]
 }

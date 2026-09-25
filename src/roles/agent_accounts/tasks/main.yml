@@ -3,14 +3,13 @@
   become: true
   ansible.builtin.group:
     name: "{{ agent_accounts_group }}"
-    gid: "{{ agent_accounts_group_gid }}"
+    gid: "{{ agent_accounts_group_gid | default(omit) }}"
     state: present
 
 - name: Ensure each agent account exists
   become: true
   ansible.builtin.user:
     name: "{{ item.name }}"
-    uid: "{{ item.uid }}"
     group: "{{ agent_accounts_group }}"
     comment: "{{ item.real_name }}"
     shell: "{{ item.shell }}"
