@@ -19,4 +19,3 @@ assert_distinct() {
 }
 
 assert_distinct name
-assert_distinct uid

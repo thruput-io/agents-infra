@@ -1,14 +1,11 @@
 ---
 agents:
   - name: tore
-    uid: 503
     real_name: Agent Tore
     shell: /bin/zsh
   - name: rasmus
-    uid: 504
     real_name: Agent Rasmus
     shell: /bin/zsh
   - name: paula
-    uid: 505
     real_name: Agent Paula
     shell: /bin/zsh

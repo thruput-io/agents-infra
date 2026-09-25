@@ -1,6 +1,8 @@
 ---
 agents:
   - name: paula
-    uid: 500
     real_name: Agent Paula
+    shell: /bin/zsh
+  - name: paula
+    real_name: Agent Paula Two
     shell: /bin/zsh
