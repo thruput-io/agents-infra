@@ -1,0 +1,86 @@
+---
+- name: Ensure GCP APIs are enabled for Google Chat & WIF
+  ansible.builtin.command:
+    cmd: >
+      gcloud services enable
+      chat.googleapis.com
+      sts.googleapis.com
+      iamcredentials.googleapis.com
+      pubsub.googleapis.com
+      run.googleapis.com
+      --project "{{ gcp_project_id }}"
+  changed_when: false
+
+- name: Ensure agent GCP Service Account exists
+  ansible.builtin.command:
+    cmd: >
+      gcloud iam service-accounts create "{{ service_account_name }}"
+      --display-name "GCP Service Account for agent {{ agent_name }}"
+      --project "{{ gcp_project_id }}"
+  register: sa_create_result
+  failed_when: sa_create_result.rc != 0 and 'AlreadyExists' not in sa_create_result.stderr
+  changed_when: sa_create_result.rc == 0
+
+- name: Ensure Workload Identity Federation (WIF) Pool exists
+  ansible.builtin.command:
+    cmd: >
+      gcloud iam workload-identity-pools create "{{ wif_pool_name }}"
+      --location "global"
+      --display-name "GitHub Actions WIF Pool"
+      --project "{{ gcp_project_id }}"
+  register: pool_create_result
+  failed_when: pool_create_result.rc != 0 and 'AlreadyExists' not in pool_create_result.stderr
+  changed_when: pool_create_result.rc == 0
+
+- name: Ensure WIF Provider exists for GitHub OIDC
+  ansible.builtin.command:
+    cmd: >
+      gcloud iam workload-identity-pools providers create-oidc "{{ wif_provider_name }}"
+      --workload-identity-pool "{{ wif_pool_name }}"
+      --location "global"
+      --issuer-uri "https://token.actions.githubusercontent.com"
+      --attribute-mapping "google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository"
+      --attribute-condition "attribute.repository == '{{ github_repo }}' && attribute.actor == '{{ agent_name }}'"
+      --project "{{ gcp_project_id }}"
+  register: provider_create_result
+  failed_when: provider_create_result.rc != 0 and 'AlreadyExists' not in provider_create_result.stderr
+  changed_when: provider_create_result.rc == 0
+
+- name: Bind Service Account to GitHub WIF Principal
+  ansible.builtin.command:
+    cmd: >
+      gcloud iam service-accounts add-iam-policy-binding "{{ service_account_email }}"
+      --role "roles/iam.workloadIdentityUser"
+      --member "principalSet://iam.googleapis.com/projects/{{ gcp_project_id }}/locations/global/workloadIdentityPools/{{ wif_pool_name }}/attribute.repository/{{ github_repo }}"
+      --project "{{ gcp_project_id }}"
+  changed_when: true
+
+- name: Ensure dedicated Pub/Sub topic exists for agent identity
+  ansible.builtin.command:
+    cmd: >
+      gcloud pubsub topics create "{{ pubsub_topic_name }}"
+      --project "{{ gcp_project_id }}"
+  register: topic_create_result
+  failed_when: topic_create_result.rc != 0 and 'AlreadyExists' not in topic_create_result.stderr
+  changed_when: topic_create_result.rc == 0
+
+- name: Grant Google Chat Service Account Publisher role on Pub/Sub topic
+  ansible.builtin.command:
+    cmd: >
+      gcloud pubsub topics add-iam-policy-binding "{{ pubsub_topic_name }}"
+      --role "roles/pubsub.publisher"
+      --member "serviceAccount:chat-api-push@system.gserviceaccount.com"
+      --project "{{ gcp_project_id }}"
+  changed_when: true
+
+- name: Ensure Push Subscription with Attribute Filter exists
+  ansible.builtin.command:
+    cmd: >
+      gcloud pubsub subscriptions create "{{ pubsub_subscription_name }}"
+      --topic "{{ pubsub_topic_name }}"
+      --push-endpoint "{{ cloud_run_endpoint_url }}"
+      --message-filter 'attributes.target = "{{ pubsub_target_host }}"'
+      --project "{{ gcp_project_id }}"
+  register: sub_create_result
+  failed_when: sub_create_result.rc != 0 and 'AlreadyExists' not in sub_create_result.stderr
+  changed_when: sub_create_result.rc == 0

@@ -1,0 +1,7 @@
+---
+- name: Provision Google Chat Infrastructure, WIF, and Pub/Sub Filtering
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - role: google_chat_infra

@@ -1,0 +1,18 @@
+---
+gcp_project_id: "agent-infra-gchat"
+agent_name: "rasmus"
+service_account_name: "rasmus-agent-sa"
+service_account_email: "{{ service_account_name }}@{{ gcp_project_id }}.iam.gserviceaccount.com"
+
+# Workload Identity Federation (WIF)
+wif_pool_name: "github-pool"
+wif_provider_name: "github-provider"
+github_repo: "thruput-io/gettoken"
+
+# Pub/Sub Configuration (One topic per agent identity)
+pubsub_topic_name: "{{ agent_name }}-chat-events"
+pubsub_subscription_name: "{{ agent_name }}-johans-laptop-sub"
+pubsub_target_host: "johans-laptop"
+
+# Cloud Run / Push Endpoint Configuration
+cloud_run_endpoint_url: "https://{{ agent_name }}-{{ pubsub_target_host }}.a.run.app/pubsub"
